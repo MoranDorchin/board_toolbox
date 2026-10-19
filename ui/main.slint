@@ -1,0 +1,176 @@
+import "./assets/CascadiaCodePL.ttf";
+import { Button } from "std-widgets.slint";
+
+//tab
+struct TabItem {
+    name: string,
+    //todo: add icon
+}
+export component MainWindow inherits Window {
+    min-width: 400px;
+    min-height: 300px;
+    title: "Board ToolBox - Beta";
+
+    default-font-family: "Cascadia Code PL";
+
+    //tabs
+    in-out property <[TabItem]> tabs: [{ name: "Main Menu" }];
+    //tab scrolling
+    in-out property <length> tab-scroll-x: 0px;
+    animate tab-scroll-x {
+        duration: 250ms;
+        easing: ease-out;
+    }
+
+    callback add-tab-clicked();
+    callback undo-clicked();
+    callback redo-clicked();
+
+    callback hold_scroll_changed(int);
+
+    VerticalLayout {
+
+        Rectangle {
+            height: 50px;
+            background: #aaaaaa;
+
+            HorizontalLayout {
+                padding-left: 15px;
+                padding-right: 15px;
+                alignment: space-between;
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    alignment: center;
+                    cross-axis-alignment: CrossAxisAlignment.center;
+
+                    //Placeholder Icon
+                    Rectangle {
+                        width: 24px;
+                        height: 24px;
+                        background: #4caf50;
+                    }
+                    //Title
+                    Text {
+                        text: "Board Toolbox";
+                        color: #ffffff;
+                        font-size: 16px;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: LayoutAlignment.center;
+                    cross-axis-alignment: CrossAxisAlignment.center;
+
+                    //Placeholder Undo button
+                    Button {
+                        text: "<-|";
+                        width: 40px;
+                        height: 30px;
+                        clicked => { root.undo-clicked(); }
+                    }
+                    //Placeholder Redo button
+                    Button {
+                        text: "|->";
+                        width: 40px;
+                        height: 30px;
+                        clicked => { root.redo-clicked(); }
+                    }
+                    //Placeholder Plus button
+                    Button {
+                        text: "+";
+                        width: 40px;
+                        height: 30px;
+                        clicked => { root.add-tab-clicked(); }
+                    }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            left-btn := Rectangle {
+                width: 25px;
+                background: #aaaaaa;
+                Text {
+                    text: "<";
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                TouchArea {
+                    pointer-event(event) => {
+                        if (event.kind == PointerEventKind.down) { root.hold_scroll_changed(-1); }
+                        if (event.kind == PointerEventKind.up) { root.hold_scroll_changed(0); }
+                    }
+                }
+            }
+            //tab bar
+            scroll-bar := Flickable {
+                horizontal-stretch: 1;
+                height: 35px;
+                interactive: false;
+                content-x: root.tab-scroll-x;
+
+                bar := HorizontalLayout {
+                    height: 35px;
+                    alignment: LayoutAlignment.start;
+                    cross-axis-alignment: CrossAxisAlignment.center;
+
+                    //placeholder tab
+                    for tab in root.tabs: Rectangle {
+                        //takes 1/5 of width unless there is no space, then take equal space
+                        height: 35px;
+
+                        background: #2196f3; // Blue tab placeholder
+                        border-width: 3px;
+                        border-color: #ffffff5d;
+
+                        HorizontalLayout {
+                            padding-left: 6px;
+                            padding-right: 6px;
+                            spacing: 6px;
+                            alignment: LayoutAlignment.start;
+                            cross-axis-alignment: CrossAxisAlignment.center;
+
+                            //placeholder icon
+                            Rectangle {
+                                width: 14px;
+                                height: 14px;
+                                background: #4caf50;
+                                border-radius: 2px;
+                            }
+
+                            Text {
+                                text: tab.name;
+                                color: #ffffff;
+                                font-size: 10px;
+                            }
+                        }
+                    }
+                }
+            }
+
+            right-btn := Rectangle {
+                width: 25px;
+                background: #aaaaaa;
+                Text {
+                    text: ">";
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                TouchArea {
+                    pointer-event(event) => {
+                        if (event.kind == PointerEventKind.down) { root.hold_scroll_changed(1); }
+                        if (event.kind == PointerEventKind.up) { root.hold_scroll_changed(0); }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            background: transparent;
+        }
+    }
+}
