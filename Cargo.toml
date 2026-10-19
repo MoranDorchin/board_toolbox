@@ -1,0 +1,10 @@
+[package]
+name = "board_toolbox"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+slint = "1.3.2"
+
+[build-dependencies]
+slint-build = "1.3.2"
