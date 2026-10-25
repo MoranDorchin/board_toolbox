@@ -1,0 +1,21 @@
+export component Dropdown inherits Rectangle {
+    in-out property <length> anchor-x: 0px;
+    in-out property <length> anchor-y: 0px;
+    in-out property <length> base-width: 150px;
+    in-out property <length> base-height: 200px;
+    in-out property <bool> is-open: false;
+
+    x: root.anchor-x;
+    y: root.anchor-y;
+    width: root.base-width;
+    height: root.is-open ? root.base-height : 0px;
+
+    clip: true;
+
+    animate height {
+        duration: 150ms;
+        easing: ease-in-out;
+    }
+
+    @children
+}

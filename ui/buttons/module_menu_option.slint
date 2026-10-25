@@ -1,0 +1,35 @@
+import { Button } from "std-widgets.slint";
+export component ModuleMenuBtn inherits Rectangle {
+    //icon placeholder
+    in-out property <string> text;
+    callback clicked();
+
+    height: 35px;
+    background: #3a3a3a;
+    border-radius: 4px;
+
+    HorizontalLayout {
+        padding: 10px;
+        spacing: 8px;
+        alignment: start;
+        cross-axis-alignment: center;
+
+        //Icon placeholder
+        Rectangle {
+            width: 14px;
+            height: 14px;
+            background: #4caf50;
+            border-radius: 2px;
+        }
+
+        Text {
+            text: root.text;
+            color: #ffffff;
+            font-size: 11px;
+        }
+    }
+
+    TouchArea {
+        clicked => { root.clicked() }
+    }
+}
