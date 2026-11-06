@@ -5,6 +5,41 @@ use std::rc::Rc;
 use std::cell::{RefCell};
 use std::collections::VecDeque;
 
+mod modules;
+use modules::{ModuleState, placeholder::PlaceholderState};
+
+
+pub struct StateRegistry {
+    next_id: i32,
+    registry: std::collections::HashMap<i32, ModuleState>,
+}
+impl StateRegistry {
+    pub fn new() -> Self {
+        let mut initial_regestry = std::collections::HashMap::new();
+        initial_regestry.insert(0, ModuleState::MainMenu);
+
+        Self {
+            next_id: 1,
+            registry: initial_regestry,
+        }
+    }
+    pub fn register_new_module(&mut self, kind: &str) -> i32 {
+        let id = self.next_id;
+        self.next_id += 1;
+
+        let state = match kind {
+            "Main Menu" => ModuleState::MainMenu,
+            _ => ModuleState::Placeholder(PlaceholderState::default()),
+        };
+
+        self.registry.insert(id, state);
+        id
+    }
+    pub fn get_mut_state(&mut self, id: i32) -> Option<&mut ModuleState> {
+        self.registry.get_mut(&id)
+    }
+}
+
 pub trait UndoableCommand {
     fn name(&self) -> &str;
     fn undo(&mut self, ui: &MainWindow);
@@ -12,6 +47,7 @@ pub trait UndoableCommand {
 }
 struct AddTabCommand {
     module_name: String,
+    assigned_id: i32,
     assigned_index: usize,
     tabs_model: Rc<VecModel<TabItem>>,
     active_tab_state: Rc<std::cell::Cell<i32>>,
@@ -29,6 +65,7 @@ impl UndoableCommand for AddTabCommand {
     }
     fn redo(&mut self, ui: &MainWindow) {
         self.tabs_model.insert(self.assigned_index, TabItem {
+            id: self.assigned_id,
             kind: SharedString::from(&self.module_name),
         });
 
@@ -117,22 +154,22 @@ impl HistoryManager {
 
 fn main() -> Result<(), slint::PlatformError> {
 
+    // initializing
     let initial_tabs = vec! [
-        TabItem { kind: SharedString::from("Main Menu")}
+        TabItem { id: 0, kind: SharedString::from("Main Menu")}
     ];
     let tabs_model = Rc::new(VecModel::from(initial_tabs));
 
-    // undo/redo
+    // base infrastructure
     let history_manager = Rc::new(RefCell::new(HistoryManager::new(100)));
+    let state_registry = Rc::new(RefCell::new(StateRegistry::new()));
     let processing_history = Rc::new(std::cell::Cell::new(false));
-
     let active_tab_state = Rc::new(std::cell::Cell::new(0));
     
     let ui = MainWindow::new()?;
     let ui_weak = ui.as_weak();
 
-    //Top bar stuff :
-    //tab change
+    //tab change callback
     let active_tab_clone = active_tab_state.clone();
     let switch_history = history_manager.clone();
     let switch_history_lock = processing_history.clone();
@@ -153,36 +190,49 @@ fn main() -> Result<(), slint::PlatformError> {
         switch_history.borrow_mut().record_action(Box::new(cmd));
         active_tab_clone.set(new_index);
     });
-    //tabs stuff
+    
+    //initial model references
     ui.set_tabs(ModelRc::from(tabs_model.clone()));
 
     let add_tab_ui_weak = ui_weak.clone();
     let tabs_model_clone = tabs_model.clone();
     let active_tab_state_clone = active_tab_state.clone();
     let history_clone = history_manager.clone();
+    let registry_clone = state_registry.clone();
+    let add_lock = processing_history.clone();
 
     ui.on_add_tab(move |module_name| {
+        if add_lock.get() { return; }
+
+        let mut registry = registry_clone.borrow_mut();
+        let assigned_id = registry.register_new_module(&module_name);
         let current_index = tabs_model_clone.row_count();
 
         let mut cmd = AddTabCommand {
             module_name: module_name.to_string(),
+            assigned_id,
             assigned_index: current_index,
             tabs_model: tabs_model_clone.clone(),
             active_tab_state: active_tab_state_clone.clone(),
         };
 
         if let Some(gui) = add_tab_ui_weak.upgrade() {
+            add_lock.set(true);
             cmd.redo(&gui);
+            add_lock.set(false);
         }
         history_clone.borrow_mut().record_action(Box::new(cmd));
     });
 
+    //tab closing callback
     let close_tabs_model = tabs_model.clone();
     let close_history = history_manager.clone();
     let close_active_state = active_tab_state.clone();
     let close_ui_weak = ui_weak.clone();
+    let close_lock = processing_history.clone();
 
     ui.on_close_tab(move |idx| {
+        if close_lock.get() { return; }
         let index = idx as usize;
         if close_tabs_model.row_count() <= 1 { return; }
 
@@ -201,7 +251,9 @@ fn main() -> Result<(), slint::PlatformError> {
             };
 
             if let Some(gui) = close_ui_weak.upgrade() {
+                close_lock.set(true);
                 cmd.redo(&gui);
+                close_lock.set(false);
             }
             close_history.borrow_mut().record_action(Box::new(cmd));
         }
@@ -226,6 +278,21 @@ fn main() -> Result<(), slint::PlatformError> {
             redo_lock.set(true);
             history_manager_clone2.borrow_mut().execute_redo(&gui);
             redo_lock.set(false);
+        }
+    });
+
+    let test_registry = state_registry.clone();
+    let test_history = history_manager.clone();
+    let test_ui_weak = ui_weak.clone();
+
+    ui.on_increment_placeholder_counter(move |tab_id| {
+        let mut registry = test_registry.borrow_mut();
+        if let Some(ModuleState::Placeholder(state)) = registry.get_mut_state(tab_id) {
+            state.click_count += 1;
+            
+            if let Some(gui) = test_ui_weak.upgrade() {
+                gui.set_placeholder_display_count(state.click_count);
+            }
         }
     });
 

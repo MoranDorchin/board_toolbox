@@ -6,6 +6,7 @@ import { ModuleMenuBtn } from "buttons/module_menu_option.slint";
 
 //tab
 struct TabItem {
+    id: int,
     kind: string,
     //todo: add icon
 }
@@ -41,6 +42,10 @@ export component MainWindow inherits Window {
     callback redo-clicked();
 
     callback hold_scroll_changed(int);
+
+    //test module:
+    in-out property <int> placeholder-display-count: 0;
+    callback increment-placeholder-counter(int);
 
     FocusScope {
         width: 100%;
@@ -243,7 +248,16 @@ export component MainWindow inherits Window {
                 vertical-stretch: 1;
                 background: transparent;
                 if root.tabs[root.active-tab-index].kind == "Main Menu": MainMenu { }
-                if root.tabs[root.active-tab-index].kind == "Placeholder Module": PlaceholderModule { }
+                if root.tabs[root.active-tab-index].kind == "Placeholder Module": PlaceholderModule {
+
+                    tab-id: root.tabs[root.active-tab-index].id;
+
+                    display-count: root.placeholder-display-count;
+
+                    request-increment(id) => {
+                        root.increment-placeholder-counter(id);
+                    }
+                }
             }
         }
         //LAYER 2: click blocking thing

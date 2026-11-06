@@ -1,3 +1,40 @@
+import { Button } from "std-widgets.slint";
 export component PlaceholderModule inherits Rectangle {
     background: #4a148c;
+
+    in property <int> tab-id;
+    in property <int> display-count: 0;
+
+    callback request-increment(int);
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 20px;
+
+        Text {
+            text: "Placeholder Test Module";
+            color: #ffffff;
+            font-size: 20px;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: "Internal Count Status: " + root.display-count;
+            color: #4caf50;
+            font-size: 16px;
+            horizontal-alignment: center;
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            Button {
+                text: "Increment Counter";
+                width: 220px;
+                height: 40px;
+                clicked => {
+                    root.request-increment(root.tab-id);
+                }
+            }
+        }
+    }
 }
